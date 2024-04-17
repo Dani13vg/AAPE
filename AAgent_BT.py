@@ -5,6 +5,7 @@ import json
 import Sensors
 import Goals_BT
 import BTRoam
+import time
 
 
 class InternalState:
@@ -27,6 +28,9 @@ class InternalState:
         self.speed = 0.0
         self.position = {"x": 0, "y": 0, "z": 0}
         self.rotation = {"x": 0, "y": 0, "z": 0}
+        self.hungry = True
+        self.last_time_agent_ate = time.time()
+        self.stop_due_to_collision = False
 
     def set_internal_state(self, i_state_dict):
         self.isRotatingRight = i_state_dict["isRotatingRight"]
@@ -36,6 +40,18 @@ class InternalState:
         self.speed = i_state_dict["speed"]
         self.position = i_state_dict["position"]
         self.rotation = i_state_dict["rotation"]
+    
+    def is_hungry(self):
+        return self.hungry
+
+    def last_lunch_time(self):
+        return self.last_time_agent_ate
+    
+    def update_lunch_time(self, curr_time):
+        self.last_time_agent_ate = curr_time
+
+    def new_hungry(self, hungry):
+        self.hungry = hungry
 
 
 class AAgent:
@@ -64,29 +80,31 @@ class AAgent:
         # variables used for the websocket connection
         self.session = None
         self.ws = None
-        # State of the simulation: ON_HOLD | RUNNING
+        # State of the simulation: ON_HOLD | RUNNING.
         self.simulation_state = self.ON_HOLD
-        # Asyncio exit event used to notify the tasks that they have to finish
+        # Asyncio exit event used to notify the tasks that they have to finish.
         self.exit_event = asyncio.Event()
-        # Flag that confirms the connection with Unity is fully operative and that Unity is waiting for messages
+        # Flag that confirms the connection with Unity is fully operative and that Unity is waiting for messages.
         self.connection_ready = False
 
-        # Reference to the possible goals the agent can execute
+        # Reference to the possible goals the agent can execute.
         self.goals = {
             "DoNothing": Goals_BT.DoNothing(self),
             "ForwardDist": Goals_BT.ForwardDist(self, -1, 5, 10),
             "Turn": Goals_BT.Turn(self),
-            "Avoid": Goals_BT.Avoid(self)
+            "Avoid": Goals_BT.Avoid(self),
+            "EatFlower": Goals_BT.EatFlower(self)
         }
+
         # Active goal
         self.currentGoal = None
 
-        # Reference to the possible behaviour trees the agent ca execute
+        # Reference to the possible behaviour trees the agent can execute.
         self.bts = {
             "BTRoam": BTRoam.BTRoam(self)
         }
 
-        # Active behaviour tree
+        # Active behaviour tree.
         self.currentBT = None
 
     async def open_websocket(self):

@@ -99,7 +99,6 @@ class BN_DetectFlower(pt.behaviour.Behaviour):
         print("Initializing BN_DetectFlower")
         super(BN_DetectFlower, self).__init__("BN_DetectFlower")
         self.my_agent = aagent
-        self.is_hungry = False
         
     def update(self):
         sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
@@ -113,34 +112,8 @@ class BN_DetectFlower(pt.behaviour.Behaviour):
         self.my_agent.near_flower = False
         return pt.common.Status.FAILURE
 
-    def terminate(self, new_status: common.Status):
-        pass
 
-class BN_DetectObstacle(pt.behaviour.Behaviour):
-    def __init__(self, aagent):
-        self.my_goal = None
-        print("Initializing BN_DetectObstacle")
-        super(BN_DetectObstacle, self).__init__("BN_DetectObstacle")
-        self.my_agent = aagent
 
-    def initialise(self):
-        pass
-
-    def update(self):
-        #print("inside bn detect obstacle")
-        #if any(ray_hit == 1 for ray_hit in self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.HIT]):
-        sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
-        for index, value in enumerate(sensor_obj_info):
-            if value:  # there is a hit with an object
-                #if value["tag"] != "Flower":
-                print("BN_DetectObstacle completed with SUCCESS")
-                return pt.common.Status.SUCCESS
-        # print("No obstacle...")
-        # print("BN_DetectObstacle completed with FAILURE")
-        return pt.common.Status.FAILURE
-
-    def terminate(self, new_status: common.Status):
-        pass
 
 class BN_Avoid(pt.behaviour.Behaviour):
     def __init__(self, aagent):
@@ -164,10 +137,30 @@ class BN_Avoid(pt.behaviour.Behaviour):
         self.logger.debug("Terminate BN_Avoid")
         self.my_goal.cancel()
 
+class BN_IsHungry(pt.behaviour.Behaviour):
+    def __init__(self, aagent):
+        self.my_goal = None
+        print("Initializing BN_IsHungry")
+        super(BN_IsHungry, self).__init__("BN_IsHungry")
+        self.my_agent = aagent
+        self.previous_hungry_state = None
+
+    def update(self):
+        hungry_flag = self.my_agent.i_state.hungry
+
+        if hungry_flag == True:
+            return pt.common.Status.SUCCESS
+        
+        else:
+            if time.time() - self.my_agent.i_state.last_lunch_time() >= 15:
+                self.my_agent.i_state.new_hungry(True)
+                return pt.common.Status.SUCCESS
+        
 
 class BN_EatFlower(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         super(BN_EatFlower, self).__init__("BN_EatFlower")
+        self.my_goal = None
         self.my_agent = aagent
 
     def initialise(self):
@@ -193,6 +186,7 @@ class BTRoam:
         # py_trees.logging.level = py_trees.logging.Level.DEBUG
 
         self.aagent = aagent
+        self.hungry_flag = False
 
         # VERSION 1
         # self.root = pt.composites.Sequence(name="Sequence", memory=True)
@@ -205,22 +199,20 @@ class BTRoam:
         # self.root.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
 
         # VERSION 3 (with DetectFlower)
+        eat=pt.composites.Sequence(name="EatFlower", memory=True)
+        eat.add_children([BN_DetectFlower(aagent), BN_EatFlower(aagent)])
 
+        hungry = pt.composites.Sequence(name="Is_Hungry", memory=True)
+        hungry.add_children([BN_IsHungry(aagent), eat])
 
-        eat = pt.composites.Sequence(name="Detect_Avoid", memory=True)
-        eat.add_children([BN_EatFlower(aagent), BN_DoNothing(aagent)])
-
-        avoid = pt.composites.Sequence(name="Detect_Avoid", memory=True)
+        avoid = pt.composites.Sequence(name="Avoid", memory=True)
         avoid.add_children([BN_Avoid(aagent), BN_DoNothing(aagent)])
-
-        detection = pt.composites.Sequence(name="DetectFlower", memory=True)
-        detection.add_children([BN_DetectFlower(aagent), eat])
 
         #roaming = pt.composites.Parallel("Parallel", policy=py_trees.common.ParallelPolicy.SuccessOnAll())
         #roaming.add_children([BN_ForwardRandom(aagent), BN_TurnRandom(aagent)])
 
         self.root = pt.composites.Selector(name="Selector", memory=False)
-        self.root.add_children([avoid, detection])
+        self.root.add_children([hungry, avoid])
 
         self.behaviour_tree = pt.trees.BehaviourTree(self.root)
 

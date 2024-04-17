@@ -2,7 +2,7 @@ import math
 import random
 import asyncio
 import Sensors
-from collections import Counter
+import time
 
 
 def calculate_distance(point_a, point_b):
@@ -191,7 +191,9 @@ class Avoid:
 
                 elif self.state == self.AVOIDING:
                     if self.turn_task and not self.turn_task.state == Turn.SELECTING:
+                        result = True
                         await asyncio.sleep(0.1)  # Wait for turn to complete
+                        
                     else:
                         # Turn completed, go back to forward state
                         self.state = self.FORWARD if random.random() < 0.8 else self.AVOIDING
@@ -209,15 +211,23 @@ class Avoid:
 class EatFlower:
     def __init__(self, a_agent):
         self.a_agent = a_agent
-        self.is_hungry = True
+        self.i_state = a_agent.i_state
 
     async def run(self):
-        if self.is_hungry and 'Flower' in [obj['tag'] for obj in self.a_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]]:
-            print("Eating...")
-            await asyncio.sleep(5)  # Stop when flower detected for 5 secs.
-            print("Flower eaten!")
-            self.is_hungry = False
-            return True
-        return False
+    
+        print("Eating...")
+        await asyncio.sleep(5)  # Stop when flower detected for 5 secs.
+        self.a_agent.i_state.update_hunger(False)
+        self.a_agent.i_state.update_lunch_time(time.time())
+        print("Flower eaten!")
+        return True
+      
+
+
+      
+
+
+
+
 
 
