@@ -99,17 +99,20 @@ class BN_DetectFlower(pt.behaviour.Behaviour):
         print("Initializing BN_DetectFlower")
         super(BN_DetectFlower, self).__init__("BN_DetectFlower")
         self.my_agent = aagent
-        
+
+    def initialise(self):
+        pass
+
     def update(self):
         sensor_obj_info = self.my_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]
-        for value in enumerate(sensor_obj_info):
+        for index, value in enumerate(sensor_obj_info):
             if value:  # there is a hit with an object
                 if value["tag"] == "Flower":  # If it is a flower
-                    self.my_agent.near_flower = True
-                    print("Flower detected!")
+                    # print("Flower detected!")
                     print("BN_DetectFlower completed with SUCCESS")
                     return pt.common.Status.SUCCESS
-        self.my_agent.near_flower = False
+        # print("No flower...")
+        # print("BN_DetectFlower completed with FAILURE")
         return pt.common.Status.FAILURE
 
 
@@ -140,21 +143,36 @@ class BN_Avoid(pt.behaviour.Behaviour):
 class BN_IsHungry(pt.behaviour.Behaviour):
     def __init__(self, aagent):
         self.my_goal = None
-        print("Initializing BN_IsHungry")
-        super(BN_IsHungry, self).__init__("BN_IsHungry")
+        print("Initializing BN_CheckIfHungry")
+        super(BN_IsHungry, self).__init__("BN_CheckIfHungry")
         self.my_agent = aagent
         self.previous_hungry_state = None
 
-    def update(self):
-        hungry_flag = self.my_agent.i_state.hungry
+    def initialise(self):
+        pass
 
-        if hungry_flag == True:
+    def update(self):
+        current_hungry_state = self.my_agent.i_state.hungry
+
+        if self.my_agent.i_state.hungry:
+            if current_hungry_state != self.previous_hungry_state:
+                print("BN_IsHungry completed with SUCCESS")
+                self.previous_hungry_state = current_hungry_state
             return pt.common.Status.SUCCESS
-        
+        elif time.time() - self.my_agent.i_state.last_lunch_time() >= 15:
+            if current_hungry_state != self.previous_hungry_state:
+                print("BN_IsHungry completed with SUCCESS")
+                self.previous_hungry_state = current_hungry_state
+            self.my_agent.i_state.update_hunger(True)
+            return pt.common.Status.SUCCESS
         else:
-            if time.time() - self.my_agent.i_state.last_lunch_time() >= 15:
-                self.my_agent.i_state.new_hungry(True)
-                return pt.common.Status.SUCCESS
+            if current_hungry_state != self.previous_hungry_state:
+                print("BN_CheckIfHungry completed with FAILURE")
+                self.previous_hungry_state = current_hungry_state
+            return pt.common.Status.FAILURE
+
+    def terminate(self, new_status: common.Status):
+        pass
         
 
 class BN_EatFlower(pt.behaviour.Behaviour):
