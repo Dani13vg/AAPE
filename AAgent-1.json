@@ -1,0 +1,17 @@
+{
+  "Server": {
+    "host": "127.0.0.1",
+    "port": 4649
+  },
+  "AgentParameters": {
+    "name": "Critter_1",
+    "type": "AAgentCritterMantaRay",
+    "spawn_point": 0,
+    "debug_mode": true,
+    "manual_control": false,
+    "ray_perception_sensor_param": [5,90,0,5]
+  }
+}
+
+
+

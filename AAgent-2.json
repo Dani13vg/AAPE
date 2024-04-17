@@ -1,0 +1,14 @@
+{
+  "Server": {
+    "host": "127.0.0.1",
+    "port": 4649
+  },
+  "AgentParameters": {
+    "name": "Astronaut",
+    "type": "AAgentAstronaut",
+    "spawn_point": 1,
+    "debug_mode": false,
+    "manual_control": false,
+    "ray_perception_sensor_param": [1,15,0,5]
+  }
+}
