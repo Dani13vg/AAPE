@@ -76,7 +76,9 @@ class AAgent:
             "DoNothing": Goals_BT.DoNothing(self),
             "ForwardDist": Goals_BT.ForwardDist(self, -1, 5, 10),
             "Turn": Goals_BT.Turn(self),
-            "Avoid": Goals_BT.Avoid(self)
+            "Avoid": Goals_BT.Avoid(self),
+            "EatFlower": Goals_BT.EatFlower(self),
+
         }
         # Active goal
         self.currentGoal = None

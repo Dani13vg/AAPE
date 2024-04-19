@@ -151,7 +151,7 @@ class Turn:
 
 class Avoid:
     """
-    obstacle avoidance class that uses both ForwardDist and Turn classes for movement and turning.
+    Obstacle avoidance class that uses both ForwardDist and Turn classes for movement and turning.
     """
     FORWARD = 0
     AVOIDING = 1
@@ -173,8 +173,8 @@ class Avoid:
                     if any(sensor_hit):
                         # If there are obstacles, initiate avoiding state and start turning
                         self.state = self.AVOIDING
-                        left_proximity = sum([sensor_distances[i] for i in range(len(sensor_distances)//2) if sensor_hit[i]])
-                        right_proximity = sum([sensor_distances[i] for i in range(len(sensor_distances)//2 + 1, len(sensor_distances)) if sensor_hit[i]])
+                        left_proximity = sum(sensor_distances[:len(sensor_distances)//2])
+                        right_proximity = sum(sensor_distances[len(sensor_distances)//2:])
 
                         if left_proximity < right_proximity:
                             self.turn_task = Turn(self.a_agent)
@@ -194,7 +194,9 @@ class Avoid:
                         await asyncio.sleep(0.1)  # Wait for turn to complete
                     else:
                         # Turn completed, go back to forward state
-                        self.state = self.FORWARD if random.random() < 0.8 else self.AVOIDING
+                        self.state = self.FORWARD
+                        self.forward_task = ForwardDist(self.a_agent, -1, 1, 5)  # Reset forward task
+                        asyncio.create_task(self.forward_task.run())
 
                 await asyncio.sleep(0.2)  # Reacting time.
 
@@ -204,20 +206,18 @@ class Avoid:
                 self.forward_task.cancel()  # Ensure forward task is also cancelled if needed
             if self.turn_task:
                 self.turn_task.cancel()
-            await self.a_agent.send_message("action", "stop")
+            await self.a_agent.send_message("action","stop")
 
 class EatFlower:
     def __init__(self, a_agent):
         self.a_agent = a_agent
-        self.is_hungry = True
 
     async def run(self):
-        if self.is_hungry and 'Flower' in [obj['tag'] for obj in self.a_agent.rc_sensor.sensor_rays[Sensors.RayCastSensor.OBJECT_INFO]]:
-            print("Eating...")
-            await asyncio.sleep(5)  # Stop when flower detected for 5 secs.
-            print("Flower eaten!")
-            self.is_hungry = False
+        print("Entering EatFlower...")
+
+        if self.a_agent.hungry:
+            print("Eating the flower...")
+            await asyncio.sleep(5)  # Stay near the flower
+            self.a_agent.hungry = False
             return True
         return False
-
-
